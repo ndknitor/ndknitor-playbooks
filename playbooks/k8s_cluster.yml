@@ -1,0 +1,7 @@
+- name: Setup Kubernetes cluster
+  hosts: k8s_nodes
+  become: true
+  vars_files:
+    - ../vars/k8s_cluster.yml
+  roles:
+    - k8s_cluster

@@ -1,0 +1,68 @@
+---
+- name: Ensure cert dir exists
+  file:
+    path: "{{ etcd_cert_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Generate CA key
+  command: openssl genrsa -out {{ etcd_cert_dir }}/ca.key 4096
+  args:
+    creates: "{{ etcd_cert_dir }}/ca.key"
+  delegate_to: "{{ groups['etcd'][0] }}"
+
+- name: Generate CA cert
+  command: >
+    openssl req -x509 -new -nodes
+    -key {{ etcd_cert_dir }}/ca.key
+    -subj "/CN=etcd-ca"
+    -days 3650
+    -out {{ etcd_cert_dir }}/ca.crt
+  args:
+    creates: "{{ etcd_cert_dir }}/ca.crt"
+  delegate_to: "{{ groups['etcd'][0] }}"
+
+- name: Generate node key
+  command: openssl genrsa -out {{ etcd_cert_dir }}/server-{{ inventory_hostname }}.key 4096
+  args:
+    creates: "{{ etcd_cert_dir }}/server-{{ inventory_hostname }}.key"
+  delegate_to: "{{ groups['etcd'][0] }}"
+
+- name: Generate node CSR
+  command: >
+    openssl req -new
+    -key {{ etcd_cert_dir }}/server-{{ inventory_hostname }}.key
+    -subj "/CN={{ inventory_hostname }}"
+    -out {{ etcd_cert_dir }}/server-{{ inventory_hostname }}.csr
+  args:
+    creates: "{{ etcd_cert_dir }}/server-{{ inventory_hostname }}.csr"
+  delegate_to: "{{ groups['etcd'][0] }}"
+
+- name: Sign node certificate
+  command: >
+    openssl x509 -req
+    -in {{ etcd_cert_dir }}/server-{{ inventory_hostname }}.csr
+    -CA {{ etcd_cert_dir }}/ca.crt
+    -CAkey {{ etcd_cert_dir }}/ca.key
+    -CAcreateserial
+    -out {{ etcd_cert_dir }}/server-{{ inventory_hostname }}.crt
+    -days 365
+  args:
+    creates: "{{ etcd_cert_dir }}/server-{{ inventory_hostname }}.crt"
+  delegate_to: "{{ groups['etcd'][0] }}"
+
+- name: Fetch certs to control machine
+  fetch:
+    src: "{{ item }}"
+    dest: "certs/{{ inventory_hostname }}/"
+    flat: no
+  loop:
+    - "{{ etcd_cert_dir }}/server-{{ inventory_hostname }}.crt"
+    - "{{ etcd_cert_dir }}/server-{{ inventory_hostname }}.key"
+    - "{{ etcd_cert_dir }}/ca.crt"
+
+- name: Distribute certs to nodes
+  copy:
+    src: "certs/{{ inventory_hostname }}/"
+    dest: "{{ etcd_cert_dir }}/"
+    mode: '0600'

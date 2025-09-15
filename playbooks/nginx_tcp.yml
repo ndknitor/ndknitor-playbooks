@@ -1,0 +1,7 @@
+- name: Configure Nginx TCP Proxy
+  hosts: proxy
+  become: true
+  vars:
+    - ../vars/nginx_tcp.yml
+  roles:
+    - nginx

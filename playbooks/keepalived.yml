@@ -1,0 +1,8 @@
+---
+- name: Install and configure Keepalived
+  hosts: loadbalancers
+  become: true
+  vars_files:
+    - ../vars/keepalived.yml
+  roles:
+    - keepalived

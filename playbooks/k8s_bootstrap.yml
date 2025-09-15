@@ -1,0 +1,7 @@
+- name: Bootstrap Kubernetes nodes
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - k8s_bootstrap
+  vars_files:
+    - ../vars/k8s_bootstrap.yml

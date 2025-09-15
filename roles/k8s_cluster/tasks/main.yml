@@ -1,0 +1,186 @@
+---
+- name: Install base packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Comment swap entries in fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*swap.*)$'
+    replace: '# \1'
+
+# ---------------- Docker / Containerd ----------------
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+
+- name: Add Docker repo
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_lsb.codename }} stable"
+    state: present
+    filename: docker
+
+- name: Install containerd
+  apt:
+    name: containerd.io
+    state: present
+    update_cache: yes
+
+# ---------------- Kubernetes ----------------
+- name: Ensure keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Kubernetes GPG key
+  get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/Release.key"
+    dest: /etc/apt/keyrings/kubernetes-archive-keyring.asc
+    mode: '0644'
+
+- name: Convert Kubernetes key to gpg
+  command: gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg /etc/apt/keyrings/kubernetes-archive-keyring.asc
+  args:
+    creates: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+
+- name: Add Kubernetes apt repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/ /"
+    state: present
+    filename: kubernetes
+
+- name: Install kubeadm and kubelet
+  apt:
+    name:
+      - kubeadm
+      - kubelet
+    state: present
+    update_cache: yes
+
+- name: Hold kubeadm and kubelet
+  command: apt-mark hold kubeadm kubelet
+
+- name: Configure kubelet node-ip
+  copy:
+    dest: /etc/default/kubelet
+    content: |
+      KUBELET_EXTRA_ARGS="--node-ip={{ ansible_host }}"
+
+# ---------------- Kernel modules ----------------
+- name: Enable kernel modules
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+
+- name: Load overlay module
+  modprobe:
+    name: overlay
+    state: present
+
+- name: Load br_netfilter module
+  modprobe:
+    name: br_netfilter
+    state: present
+
+# ---------------- Sysctl ----------------
+- name: Configure sysctl
+  copy:
+    dest: /etc/sysctl.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+
+- name: Apply sysctl settings
+  command: sysctl --system
+
+# ---------------- Containerd config ----------------
+- name: Create containerd config directory
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Generate default containerd config
+  command: containerd config default
+  register: containerd_config
+  changed_when: false
+
+- name: Write containerd config
+  copy:
+    dest: /etc/containerd/config.toml
+    content: "{{ containerd_config.stdout | regex_replace('SystemdCgroup = false', 'SystemdCgroup = true') }}"
+  notify: Restart containerd
+
+
+- name: Initialize first control plane
+  command: >
+    kubeadm init
+    --control-plane-endpoint "{{ control_plane_endpoint }}"
+    --upload-certs
+    --apiserver-advertise-address={{ ansible_host }}
+    --pod-network-cidr={{ pod_network_cidr }}
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: inventory_hostname == groups[k8s_control_group][0]
+  become: true
+
+- name: Copy kubeconfig for root
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: true
+  when: inventory_hostname in groups[k8s_control_group]
+  become: true
+
+# --- Get join commands ---
+- name: Get control-plane join command
+  command: kubeadm token create --print-join-command --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)
+  register: controlplane_join
+  changed_when: false
+  when: inventory_hostname == groups[k8s_control_group][0]
+  become: true
+
+- name: Get worker join command
+  command: kubeadm token create --print-join-command
+  register: worker_join
+  changed_when: false
+  when: inventory_hostname == groups[k8s_control_group][0]
+  become: true
+
+- name: Share join commands
+  set_fact:
+    controlplane_join_cmd: "{{ controlplane_join.stdout }}"
+    worker_join_cmd: "{{ worker_join.stdout }}"
+  when: inventory_hostname == groups[k8s_control_group][0]
+
+# --- Join other control planes ---
+- name: Join other control planes
+  command: "{{ hostvars[groups[k8s_control_group][0]].controlplane_join_cmd }}"
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when:
+    - inventory_hostname != groups[k8s_control_group][0]
+    - inventory_hostname in groups[k8s_control_group]
+  become: true
+
+# --- Join workers ---
+- name: Join worker nodes
+  command: "{{ hostvars[groups[k8s_control_group][0]].worker_join_cmd }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+  when: inventory_hostname in groups[k8s_worker_group]
+  become: true

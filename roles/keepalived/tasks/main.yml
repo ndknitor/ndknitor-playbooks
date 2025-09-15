@@ -1,0 +1,30 @@
+---
+- name: Install keepalived
+  ansible.builtin.package:
+    name: keepalived
+    state: present
+
+- name: Determine keepalived role (MASTER/BACKUP) and priority
+  set_fact:
+    keepalived_index: "{{ play_hosts.index(inventory_hostname) }}"
+    keepalived_state: "{{ 'MASTER' if play_hosts.index(inventory_hostname) == 0 else 'BACKUP' }}"
+    keepalived_priority: "{{ keepalived_base_priority - (play_hosts.index(inventory_hostname) * keepalived_priority_step) }}"
+
+- name: Show keepalived values
+  debug:
+    msg: "Host={{ inventory_hostname }} | index={{ keepalived_index }} | state={{ keepalived_state }} | priority={{ keepalived_priority }}"
+
+- name: Deploy keepalived.conf
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: "{{ keepalived_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart keepalived
+
+- name: Ensure keepalived is running and enabled
+  ansible.builtin.service:
+    name: keepalived
+    state: started
+    enabled: true

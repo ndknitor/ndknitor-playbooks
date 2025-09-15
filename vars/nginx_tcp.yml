@@ -1,0 +1,10 @@
+nginx_tcp_services:
+  - listen_port: 3306
+    dest_port: 3306
+    backend_group: db_nodes
+  - listen_port: 6379
+    dest_port: 6379
+    backend_group: redis_nodes
+  - listen_port: 5432
+    dest_port: 5432
+    backend_group: postgres_nodes

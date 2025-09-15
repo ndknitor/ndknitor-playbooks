@@ -1,0 +1,5 @@
+keepalived_vip: 192.168.56.100
+keepalived_interface: eth1
+keepalived_router_id: 51
+keepalived_base_priority: 100   # Master starts at 100
+keepalived_priority_step: 10    # Each backup decreases by 10
