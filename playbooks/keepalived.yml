@@ -1,8 +1,14 @@
 ---
 - name: Install and configure Keepalived
-  hosts: loadbalancers
+  hosts: keepalived
   become: true
-  vars_files:
-    - ../vars/keepalived.yml
+  vars:
+    keepalived_vip: 192.168.56.100/24
+    keepalived_interface: eth1
+    keepalived_router_id: 51
+    keepalived_base_priority: 100
+    keepalived_config_file: /etc/keepalived/keepalived.conf
+    keepalived_priority_step: 10
+    keepalived_auth_pass: password
   roles:
     - keepalived

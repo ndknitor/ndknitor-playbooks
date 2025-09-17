@@ -1,0 +1,7 @@
+- name: Deploy host entries for all machines
+  hosts: all
+  become: true
+  vars:
+    group_name: all
+  roles:
+    - dns_host_mesh

@@ -2,7 +2,7 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/bookworm64"
 
-  (1..2).each do |i|
+  (1..1).each do |i|
     config.vm.define "d#{i}" do |node|
       # Set the hostname and VM name
       node.vm.hostname = "debian#{i}"
