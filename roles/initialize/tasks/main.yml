@@ -1,0 +1,84 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Allow current user to run sudo without password
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL"
+    validate: 'visudo -cf %s'
+  become: true
+
+- name: Set GRUB timeout to 0
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_TIMEOUT='
+    line: 'GRUB_TIMEOUT=0'
+  become: true
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+  become: true
+
+- name: Disable SSH root login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+    backup: yes
+  become: true
+
+- name: Disable SSH password authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    state: present
+    backup: yes
+  become: true
+
+- name: Gather current IP of the interface
+  ansible.builtin.setup:
+    filter: ansible_default_ipv4
+  register: iface_info
+
+- name: Backup current interfaces file
+  ansible.builtin.copy:
+    src: /etc/network/interfaces
+    dest: /etc/network/interfaces.bak
+    remote_src: yes
+  become: true
+
+- name: Configure static IP on the interface
+  ansible.builtin.blockinfile:
+    path: /etc/network/interfaces
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      auto {{ iface_info.ansible_facts.ansible_default_ipv4.interface }}
+      iface {{ iface_info.ansible_facts.ansible_default_ipv4.interface }} inet static
+          address {{ iface_info.ansible_facts.ansible_default_ipv4.address }}
+          netmask {{ iface_info.ansible_facts.ansible_default_ipv4.netmask }}
+          gateway {{ iface_info.ansible_facts.ansible_default_ipv4.gateway }}
+          dns-nameservers {{ dns_servers | default('8.8.8.8 8.8.4.4') }}
+  become: true
+
+- name: Restart networking
+  ansible.builtin.service:
+    name: networking
+    state: restarted
+  become: true
+
+- name: Wait for network service to come back
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 60
+
+- name: Restart SSH service
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  become: true
+
+- name: Wait for SSH to come back after restart
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 60

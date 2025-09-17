@@ -1,96 +1,34 @@
 ---
-- name: Pick rules for this host (group/host or fallback to all)
+- name: Pick rules for this host (host-specific or fallback to all)
   set_fact:
     fw_rules: "{{ firewall_rules[inventory_hostname] | default(firewall_rules['all']) }}"
 
-- name: Generate iptables rules file
-  ansible.builtin.template:
-    src: firewall_docker.rules.j2
-    dest: /tmp/firewall_docker.rules
-    owner: root
-    group: root
-    mode: '0600'
+- name: Ensure DOCKER-USER chain exists
+  ansible.builtin.command: iptables -N DOCKER-USER
+  ignore_errors: yes
 
-- name: Apply iptables rules
-  ansible.builtin.shell: iptables-restore < /tmp/firewall_docker.rules
-  become: yes
+- name: Flush DOCKER-USER chain (purge by default)
+  ansible.builtin.command: iptables -F DOCKER-USER
 
+- name: Apply Docker firewall rules
+  ansible.builtin.iptables:
+    chain: DOCKER-USER
+    protocol: "{{ item.protocol }}"
+    source: "{{ item.source }}"
+    destination_port: "{{ item.destination_port }}"
+    jump: ACCEPT
+    comment: "Allow {{ item.source }} to access Docker port {{ item.destination_port }}"
+  loop: "{{ fw_rules }}"
+  loop_control:
+    label: "{{ item.destination_port }}/{{ item.protocol }}"
 
-# - name: Pick rules for this host (group/host or fallback to all)
-#   set_fact:
-#     fw_rules: "{{ firewall_rules[inventory_hostname] | default(firewall_rules['all']) }}"
-
-# - name: Ensure DOCKER-USER chain exists
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     state: present
-
-# - name: Flush DOCKER-USER chain
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     flush: yes
-
-# - name: Allow inbound rules for containers (DOCKER-USER)
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     protocol: "{{ item.proto }}"
-#     destination_port: "{{ item.dport }}"
-#     source: "{{ item.source | default(omit) }}"
-#     jump: "{{ item.jump }}"
-#   loop: "{{ fw_rules.inbound | default([]) }}"
-
-# - name: Allow established/related traffic in DOCKER-USER
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     ctstate: ESTABLISHED,RELATED
-#     jump: ACCEPT
-
-# - name: Drop all other inbound container traffic in DOCKER-USER
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     jump: DROP
-#   when: fw_rules.block_inbound | default(false)
-
-# - name: End DOCKER-USER with RETURN if not blocking
-#   ansible.builtin.iptables:
-#     chain: DOCKER-USER
-#     jump: RETURN
-#   when: not (fw_rules.block_inbound | default(false))
-
-# - name: Allow loopback traffic
-#   ansible.builtin.iptables:
-#     chain: INPUT
-#     in_interface: lo
-#     jump: ACCEPT
-
-# - name: Allow established/related sessions
-#   ansible.builtin.iptables:
-#     chain: INPUT
-#     ctstate: ESTABLISHED,RELATED
-#     jump: ACCEPT
-
-# - name: Allow SSH inbound
-#   ansible.builtin.iptables:
-#     chain: INPUT
-#     protocol: tcp
-#     destination_port: 22
-#     jump: ACCEPT
-
-# - name: Allow outbound rules
-#   ansible.builtin.iptables:
-#     chain: OUTPUT
-#     protocol: "{{ item.proto }}"
-#     destination_port: "{{ item.dport }}"
-#     destination: "{{ item.destination | default(omit) }}"
-#     jump: "{{ item.jump }}"
-#   loop: "{{ fw_rules.outbound | default([]) }}"
-
-# - name: Set default INPUT policy
-#   ansible.builtin.iptables:
-#     chain: INPUT
-#     policy: "{{ 'DROP' if fw_rules.block_inbound | default(false) else 'ACCEPT' }}"
-
-# - name: Set default OUTPUT policy
-#   ansible.builtin.iptables:
-#     chain: OUTPUT
-#     policy: "{{ 'DROP' if fw_rules.block_outbound | default(false) else 'ACCEPT' }}"
+- name: Block all other access to allowed Docker ports
+  ansible.builtin.iptables:
+    chain: DOCKER-USER
+    protocol: "{{ item.protocol }}"
+    destination_port: "{{ item.destination_port }}"
+    jump: DROP
+    comment: "Block other access to Docker port {{ item.destination_port }}"
+  loop: "{{ fw_rules }}"
+  loop_control:
+    label: "{{ item.destination_port }}/{{ item.protocol }}"

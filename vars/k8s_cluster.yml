@@ -1,5 +1,0 @@
-k8s_version: "v1.34"
-pod_network_cidr: "10.244.0.0/16"
-control_plane_endpoint: "192.168.56.101:6443"   # VIP/LB address
-k8s_control_group: "k8s_controlplanes"
-k8s_worker_group: "k8s_workers"

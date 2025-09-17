@@ -4,21 +4,9 @@
   vars:
     firewall_rules:
       all:
-        block_inbound: true
-        block_outbound: true
-        inbound:
-          - { proto: tcp, dport: 22, jump: ACCEPT, source: "0.0.0.0/0" }
-          - { proto: tcp, dport: 80, jump: ACCEPT, source: "0.0.0.0/0" }
-          - { proto: tcp, dport: 80, jump: ACCEPT, source: "0.0.0.0/0" }
-        outbound:
-          - { proto: tcp, dport: 22, jump: ACCEPT, destination: "0.0.0.0/0" }
-          - { proto: tcp, dport: 80, jump: ACCEPT, destination: "0.0.0.0/0" }
-      # etcd:
-      #   inbound:
-      #     - { proto: tcp, dport: 2379, jump: ACCEPT, source: "0.0.0.0/0" }
-      #     - { proto: tcp, dport: 2380, jump: ACCEPT, source: "0.0.0.0/0" }
-      #   outbound:
-      #     - { proto: tcp, dport: 2379, jump: ACCEPT, destination: "0.0.0.0/0" }
-      #     - { proto: tcp, dport: 2380, jump: ACCEPT, destination: "0.0.0.0/0" }
+        - { protocol: tcp, destination_port: 80, source: "192.168.56.0/24" }
+      etcd:
+        - { protocol: tcp, destination_port: 2379, source: "0.0.0.0/0" }
+        - { protocol: tcp, destination_port: 2380, source: "0.0.0.0/0" }
   roles:
     - firewall_docker
