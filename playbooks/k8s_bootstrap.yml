@@ -2,6 +2,6 @@
   hosts: k8s_bootstrap
   become: true
   vars:
-    k8s_version: "1.34"
+    version: "1.34"
   roles:
     - k8s_bootstrap
