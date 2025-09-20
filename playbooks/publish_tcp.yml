@@ -1,0 +1,15 @@
+- name: Manage TCP services
+  hosts: all
+  become: yes
+  vars:
+    rules:
+      all:
+        - { protocol: tcp, source_port: 8080, destination_port: 8080,
+            cidrs: ["192.168.56.1/32", "192.168.22.1/32"] }
+      etcd_proxy:
+        - { protocol: tcp, source_port: 2379, destination_port: 2379,
+            cidrs: ["0.0.0.0/0"] }
+        - { protocol: tcp, source_port: 2380, destination_port: 2380,
+            cidrs: ["0.0.0.0/0"] }
+  roles:
+    - publish_tcp

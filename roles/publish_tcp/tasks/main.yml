@@ -1,0 +1,23 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/localhost_tcp
+- name: Pick rules for this host (host-specific or fallback to all)
+  set_fact:
+    proxy_rules: "{{ rules[inventory_hostname] | default(rules['all']) }}"
+
+- name: Ensure nginx installed
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Ensure nginx-extras installed
+  ansible.builtin.package:
+    name: nginx-extras
+    state: present
+
+- name: Overwrite nginx.conf with custom stream proxy
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: "0644"
+  notify: Reload nginx
