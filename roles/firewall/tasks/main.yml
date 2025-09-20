@@ -1,0 +1,47 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/firewall
+- name: Ensure UFW is installed
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Reset UFW
+  community.general.ufw:
+    state: reset
+
+- name: Set default inbound policy
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set default outbound policy
+  community.general.ufw:
+    direction: outgoing
+    policy: deny
+
+- name: Pick firewall rules for this host
+  set_fact:
+    selected_rules: "{{ rules[inventory_hostname] | default(rules['all']) }}"
+
+- name: Apply inbound rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.0.port }}"
+    proto: "{{ item.0.protocol }}"
+    src: "{{ item.1 }}"
+    direction: in
+  loop: "{{ selected_rules.inbound | default([]) | subelements('cidrs') }}"
+
+- name: Apply outbound rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.0.port }}"
+    proto: "{{ item.0.protocol }}"
+    to_ip: "{{ item.1 }}"
+    direction: out
+  loop: "{{ selected_rules.outbound | default([]) | subelements('cidrs') }}"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled

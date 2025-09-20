@@ -1,0 +1,21 @@
+- name: Manage Firewall
+  hosts: all
+  become: yes
+  vars:
+    rules:
+      all:
+        inbound:
+        - { protocol: tcp, port: 22, cidrs: ["0.0.0.0/0"] }
+        - { protocol: tcp, port: 8080, cidrs: ["0.0.0.0/0"] }
+        outbound:
+        - { protocol: udp, port: 53, cidrs: ["0.0.0.0/0"] }
+        - { protocol: tcp, port: 80, cidrs: ["0.0.0.0/0"] }
+        - { protocol: tcp, port: 443, cidrs: ["0.0.0.0/0"] }
+      etcd:
+        inbound:
+        - { protocol: tcp, port: 2379, cidrs: ["192.168.56.1/32", "192.168.22.1/32"] }
+        - { protocol: tcp, port: 2380, cidrs: ["192.168.56.1/32", "192.168.22.1/32"] }
+        outbound:
+        - { protocol: udp, port: 53, cidrs: ["0.0.0.0/0"] }
+  roles:
+    - firewall
