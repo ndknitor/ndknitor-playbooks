@@ -7,7 +7,6 @@ username = "kn"
 password = "1"
 mirror = "deb.debian.org"
 public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDVqQbPFNqxA9+pMx5vGayek6KmDru+ZCKK+uckQVL0TRt7Tms6DdtRSyRovQdV8Ey4kBq3wYWyX/qWbq20V338f4qK8h/q3L3lkcxQEwtUYT6WVbW51ZEPmUs0sGrFjErvaaXEwAqlVz4K9PG3JBzgRp4WgytBddo42P+69gQXTQ== kn@ndkn"
-dns_servers = "8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1 2606:4700:4700::111 2606:4700:4700::1001"
 
 private_key_path = "~/.ssh/id_public_rsa"
 class PreseedRequestHandler(BaseHTTPRequestHandler):
@@ -22,15 +21,15 @@ class PreseedRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Missing hostname')
         
-        config_content = (
-            f"Host {hostname}\n"
-            f"    Hostname {client_ip}\n"
-            f"    User {username}\n"
-            f"    Port 22\n"
-            f"    IdentityFile {private_key_path}\n"
-        )
-        with open('./config', 'a') as config_file:
-            config_file.write(config_content)
+        # config_content = (
+        #     f"Host {hostname}\n"
+        #     f"    Hostname {client_ip}\n"
+        #     f"    User {username}\n"
+        #     f"    Port 22\n"
+        #     f"    IdentityFile {private_key_path}\n"
+        # )
+        # with open('./config', 'a') as config_file:
+        #     config_file.write(config_content)
 
         hash = crypt.crypt(password, crypt.METHOD_SHA512)
         # Generate the preseed content
@@ -65,7 +64,6 @@ d-i passwd/user-password-crypted password {hash}
 
 
 d-i netcfg/choose_interface select manual
-d-i netcfg/get_nameservers string {dns_servers}
 # Static network configuration.
 #d-i netcfg/disable_dhcp boolean true
 #d-i netcfg/get_ipaddress string {{ip}}
@@ -112,12 +110,15 @@ d-i grub-installer/bootdev  string default
 d-i preseed/late_command string \\
     in-target sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=0/' /etc/default/grub; \\
     in-target update-grub; \\
+    in-target /bin/bash -c "echo '{hostname}' > /etc/hostname"; \\
+    in-target /bin/bash -c "echo '127.0.1.1 {hostname}' >> /etc/hosts"; \\
+    in-target /bin/bash -c "echo '{username} ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers"; \\
+    in-target /bin/bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config"; \\
+    in-target /bin/bash -c "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config"; \\
     in-target mkdir -p /home/{username}/.ssh; \\
     in-target /bin/bash -c "echo '{public_key}' > /home/{username}/.ssh/authorized_keys"; \\
     in-target chown -R {username}:{username} /home/{username}/.ssh; \\
-    in-target chmod 600 /home/{username}/.ssh/authorized_keys; \\
-    in-target /bin/bash -c 'echo {hostname} > /etc/hostname' \\
-    in-target /bin/bash -c 'echo "127.0.1.1   {hostname}" >> /etc/hosts'
+    in-target chmod 600 /home/{username}/.ssh/authorized_keys;
 
 d-i finish-install/reboot_in_progress note
 """
