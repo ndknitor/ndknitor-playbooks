@@ -1,0 +1,7 @@
+- name: Install root CA certificate
+  hosts: all
+  become: true
+  vars:
+    file_name : "ca.pem"
+  roles:
+    - root_ca

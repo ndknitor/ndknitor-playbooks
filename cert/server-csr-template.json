@@ -1,0 +1,20 @@
+{
+    "CN": "{{common_name}}",
+    "hosts": [
+      "{{common_name}}",
+      "{{ip_address}}"
+    ],
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    },
+    "names": [
+      {
+        "C": "US",
+        "L": "City",
+        "O": "My Organization",
+        "OU": "My Unit",
+        "ST": "State"
+      }
+    ]
+  }
