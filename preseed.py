@@ -7,6 +7,7 @@ username = "kn"
 password = "1"
 mirror = "deb.debian.org"
 public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDVqQbPFNqxA9+pMx5vGayek6KmDru+ZCKK+uckQVL0TRt7Tms6DdtRSyRovQdV8Ey4kBq3wYWyX/qWbq20V338f4qK8h/q3L3lkcxQEwtUYT6WVbW51ZEPmUs0sGrFjErvaaXEwAqlVz4K9PG3JBzgRp4WgytBddo42P+69gQXTQ== kn@ndkn"
+dns_servers = "8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1 2606:4700:4700::111 2606:4700:4700::1001"
 
 private_key_path = "~/.ssh/id_public_rsa"
 class PreseedRequestHandler(BaseHTTPRequestHandler):
@@ -64,6 +65,7 @@ d-i passwd/user-password-crypted password {hash}
 
 
 d-i netcfg/choose_interface select manual
+d-i netcfg/get_nameservers string {dns_servers}
 # Static network configuration.
 #d-i netcfg/disable_dhcp boolean true
 #d-i netcfg/get_ipaddress string {{ip}}
