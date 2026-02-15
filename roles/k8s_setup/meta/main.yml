@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT-0
 galaxy_info:
   author: ndknitor
-  description: Bootstrap nodes for Kubernetes (containerd, kubeadm, kubelet, kernel modules, sysctl)
+  description: Kubernetes cluster setup (kubeadm init, control plane join, worker join)
   license: MIT-0
   min_ansible_version: "2.1"
   platforms:
@@ -11,6 +11,5 @@ galaxy_info:
   galaxy_tags:
     - kubernetes
     - k8s
-    - containerd
     - kubeadm
 dependencies: []

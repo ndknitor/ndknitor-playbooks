@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Get node IP from network interface
+  ansible.builtin.set_fact:
+    node_ip: "{{ hostvars[inventory_hostname]['ansible_' + network_interface].ipv4.address }}"
+
+- name: Check if node has already joined
+  ansible.builtin.stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: Join as control plane node
+  ansible.builtin.command: >
+    {{ hostvars[groups['k8s_control_plane'][0]].k8s_join_command }}
+    --apiserver-advertise-address={{ node_ip }}
+    --control-plane
+    --certificate-key {{ hostvars[groups['k8s_control_plane'][0]].k8s_certificate_key }}
+  when: not kubelet_conf.stat.exists
+
+- name: Create .kube directory for user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Copy admin.conf to user kube config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+    remote_src: yes

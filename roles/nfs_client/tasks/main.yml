@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install NFS and iSCSI packages
+  ansible.builtin.apt:
+    name:
+      - open-iscsi
+      - nfs-common
+      - util-linux
+    state: present
+    update_cache: yes
+
+- name: Enable and start iscsid
+  ansible.builtin.service:
+    name: iscsid
+    state: restarted
+    enabled: true

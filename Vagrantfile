@@ -1,9 +1,10 @@
-# vagrant plugin install vagrant-virtualbox
+# vagrant plugin install vagrant-vbguest
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/bookworm64"
+  config.vbguest.auto_update = false if Vagrant.has_plugin?("vagrant-vbguest")
 
-  (1..1).each do |i|
-    config.vm.define "d#{i}" do |node|
+  (1..5).each do |i|
+    config.vm.define "vm#{i}" do |node|
       # Set the hostname and VM name
       node.vm.hostname = "debian#{i}"
       node.vm.provider "virtualbox" do |virtualbox|

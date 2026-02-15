@@ -1,6 +1,11 @@
+# SPDX-License-Identifier: MIT-0
 ---
 - name: Restart containerd
-  systemd:
+  ansible.builtin.service:
     name: containerd
     state: restarted
-    enabled: yes
+
+- name: Restart kubelet
+  ansible.builtin.service:
+    name: kubelet
+    state: restarted

@@ -3,4 +3,4 @@
 - hosts: localhost
   remote_user: root
   roles:
-    - roles/k8s_cluster
+    - /home/kn/Projects/ndknitor-playbooks/roles/nfs_client

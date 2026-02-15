@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Get node IP from network interface
+  ansible.builtin.set_fact:
+    node_ip: "{{ hostvars[inventory_hostname]['ansible_' + network_interface].ipv4.address }}"
+
+- name: Build SANs list from VIP and control plane IPs
+  ansible.builtin.set_fact:
+    sans: "{{ [vip] + groups['k8s_control_plane'] | map('extract', hostvars, ['ansible_host']) | list }}"
+
+- name: Check if kubeadm is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_already_init
+
+- name: Initialize Kubernetes cluster
+  ansible.builtin.command: >
+    kubeadm init
+    --apiserver-advertise-address={{ node_ip }}
+    --apiserver-cert-extra-sans={{ sans | join(',') }}
+    --control-plane-endpoint={{ vip }}:6443
+    --pod-network-cidr={{ pod_network_cidr }}
+    --upload-certs
+  when: not kubeadm_already_init.stat.exists
+
+- name: Create .kube directory for user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Copy admin.conf to user kube config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+    remote_src: yes
+
+- name: Generate join command
+  ansible.builtin.command: kubeadm token create --print-join-command
+  register: join_command_raw
+  changed_when: false
+
+- name: Upload certs and get certificate key
+  ansible.builtin.command: kubeadm init phase upload-certs --upload-certs
+  register: cert_key_raw
+  changed_when: false
+
+- name: Set join facts for other plays
+  ansible.builtin.set_fact:
+    k8s_join_command: "{{ join_command_raw.stdout_lines | select('match', '^kubeadm join') | first }}"
+    k8s_certificate_key: "{{ cert_key_raw.stdout_lines | last }}"
