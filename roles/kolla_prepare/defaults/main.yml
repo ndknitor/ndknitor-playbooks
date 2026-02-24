@@ -1,0 +1,6 @@
+---
+# Cinder LVM storage defaults
+cinder_volume_group: cinder-volumes
+cinder_use_loop_device: true
+cinder_loop_file: /var/lib/cinder/cinder-volumes.img
+cinder_loop_size_gb: 20

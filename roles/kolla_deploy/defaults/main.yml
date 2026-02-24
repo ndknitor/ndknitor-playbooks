@@ -1,0 +1,46 @@
+---
+# Kolla-Ansible release
+kolla_release: "19.7.0"
+kolla_openstack_release: "2024.2"
+
+# Python venv for kolla-ansible
+kolla_venv_path: /opt/kolla-ansible
+
+# Kolla configuration directory
+kolla_config_dir: /etc/kolla
+
+# SSH for kolla-ansible to reach nodes
+kolla_ssh_user: vagrant
+kolla_ssh_private_key: ./key
+
+# OpenStack VIP (separate from K8s VIP at .100)
+kolla_internal_vip_address: 192.168.56.99
+
+# Network interfaces
+kolla_network_interface: eth1
+kolla_neutron_external_interface: eth2
+
+# Docker registry and namespace
+kolla_docker_registry: quay.io
+kolla_docker_namespace: openstack.kolla
+
+# Base distro for Kolla containers
+kolla_base_distro: debian
+
+# Neutron networking
+kolla_network_backend: ovn
+
+# Optional services
+kolla_enable_cinder: true
+kolla_enable_cinder_backend_lvm: true
+kolla_cinder_volume_group: cinder-volumes
+kolla_cinder_cluster_name: cinder-cluster
+kolla_enable_horizon: true
+kolla_enable_heat: false
+kolla_enable_octavia: false
+kolla_enable_swift: false
+kolla_enable_neutron_provider_networks: true
+kolla_enable_central_logging: false
+
+# Glance backend
+kolla_glance_backend_file: true

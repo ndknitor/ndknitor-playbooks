@@ -1,0 +1,27 @@
+---
+- name: Check if post-deploy has been completed
+  ansible.builtin.stat:
+    path: "{{ kolla_config_dir }}/.post_deploy_done"
+  register: post_deploy_marker
+
+- name: Run kolla-ansible post-deploy
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/kolla-ansible post-deploy
+      -i {{ kolla_config_dir }}/multinode
+  environment:
+    PATH: "{{ kolla_venv_path }}/bin:{{ ansible_env.PATH }}"
+    ANSIBLE_CONFIG: "{{ kolla_config_dir }}/ansible.cfg"
+  when: not post_deploy_marker.stat.exists
+  register: post_deploy_result
+
+- name: Create post-deploy marker
+  ansible.builtin.file:
+    path: "{{ kolla_config_dir }}/.post_deploy_done"
+    state: touch
+    mode: '0644'
+  when: not post_deploy_marker.stat.exists
+
+- name: Show admin credentials path
+  ansible.builtin.debug:
+    msg: "OpenStack admin credentials available at {{ kolla_config_dir }}/admin-openrc.sh"

@@ -1,0 +1,49 @@
+---
+# OpenStack Kolla-Ansible deployment variables
+
+# Kolla-Ansible release and paths
+kolla_release: "19.7.0"
+kolla_openstack_release: "2024.2"
+kolla_venv_path: /opt/kolla-ansible
+kolla_config_dir: /etc/kolla
+kolla_ssh_user: vagrant
+kolla_ssh_private_key: ./key
+
+# OpenStack VIP (separate from K8s VIP at .100)
+kolla_internal_vip_address: 192.168.56.99
+
+# Network interfaces
+kolla_network_interface: eth1
+kolla_neutron_external_interface: eth2
+
+# Docker registry and namespace
+kolla_docker_registry: quay.io
+kolla_docker_namespace: openstack.kolla
+kolla_base_distro: debian
+
+# Neutron networking backend
+kolla_network_backend: ovn
+
+# Optional services (set to true/false to enable/disable)
+kolla_enable_cinder: true                       # Block storage for VM persistent volumes
+kolla_enable_cinder_backend_lvm: true            # LVM backend for Cinder (dev/small setups; use Ceph/NFS in production)
+kolla_enable_horizon: true                       # Web dashboard UI (~250MB RAM per controller)
+kolla_enable_heat: false                         # Orchestration engine (CloudFormation-style stack templates)
+kolla_enable_octavia: false                      # Load Balancer as a Service (requires amphora images)
+kolla_enable_swift: false                        # Object storage like S3 (requires dedicated disks and ring setup)
+kolla_enable_neutron_provider_networks: true      # Allow VMs to attach directly to external/physical networks
+kolla_enable_central_logging: false              # Centralized logging via Elasticsearch + Kibana (RAM-heavy)
+
+# Glance
+kolla_glance_backend_file: true
+
+# Cinder LVM storage
+kolla_cinder_volume_group: cinder-volumes
+kolla_cinder_cluster_name: cinder-cluster
+cinder_volume_group: cinder-volumes
+cinder_use_loop_device: true
+cinder_loop_file: /var/lib/cinder/cinder-volumes.img
+cinder_loop_size_gb: 20
+
+# Nova
+nova_compute_virt_type: kvm

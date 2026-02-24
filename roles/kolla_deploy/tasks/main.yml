@@ -1,0 +1,51 @@
+---
+- name: Install system dependencies
+  ansible.builtin.apt:
+    name:
+      - python3-venv
+      - python3-pip
+      - git
+    state: present
+    update_cache: yes
+
+- name: Create Kolla-Ansible venv
+  ansible.builtin.command:
+    cmd: "python3 -m venv {{ kolla_venv_path }}"
+    creates: "{{ kolla_venv_path }}/bin/activate"
+
+- name: Install kolla-ansible and ansible-core in venv
+  ansible.builtin.pip:
+    name:
+      - "kolla-ansible=={{ kolla_release }}"
+      - "ansible-core>=2.16,<2.18"
+    virtualenv: "{{ kolla_venv_path }}"
+
+- name: Create Kolla config directory
+  ansible.builtin.file:
+    path: "{{ kolla_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Install Ansible Galaxy requirements
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/ansible-galaxy collection install
+      -r {{ kolla_venv_path }}/share/kolla-ansible/requirements.yml
+      -p /usr/share/ansible/collections
+      --force
+  changed_when: false
+
+- name: Install additional required collections
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/ansible-galaxy collection install
+      ansible.posix ansible.netcommon community.general community.docker community.crypto
+      -p /usr/share/ansible/collections
+      --force
+  changed_when: false
+
+- name: Configure Kolla-Ansible
+  ansible.builtin.include_tasks: configure.yml
+
+- name: Set up passwords
+  ansible.builtin.include_tasks: passwords.yml

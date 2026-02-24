@@ -1,0 +1,40 @@
+---
+# Play 1: Run kolla-ansible bootstrap-servers
+- name: Bootstrap OpenStack servers
+  hosts: openstack_controller[0]
+  become: true
+  tasks:
+    - name: Run bootstrap
+      ansible.builtin.include_role:
+        name: kolla_run
+        tasks_from: bootstrap.yml
+
+# Play 2: Run kolla-ansible prechecks
+- name: Run OpenStack prechecks
+  hosts: openstack_controller[0]
+  become: true
+  tasks:
+    - name: Run prechecks
+      ansible.builtin.include_role:
+        name: kolla_run
+        tasks_from: prechecks.yml
+
+# Play 3: Run kolla-ansible deploy
+- name: Deploy OpenStack
+  hosts: openstack_controller[0]
+  become: true
+  tasks:
+    - name: Run deploy
+      ansible.builtin.include_role:
+        name: kolla_run
+        tasks_from: deploy.yml
+
+# Play 4: Run kolla-ansible post-deploy
+- name: Post-deploy OpenStack
+  hosts: openstack_controller[0]
+  become: true
+  tasks:
+    - name: Run post-deploy
+      ansible.builtin.include_role:
+        name: kolla_run
+        tasks_from: post_deploy.yml

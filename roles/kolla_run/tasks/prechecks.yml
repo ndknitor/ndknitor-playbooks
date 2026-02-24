@@ -1,0 +1,9 @@
+---
+- name: Run kolla-ansible prechecks
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/kolla-ansible prechecks
+      -i {{ kolla_config_dir }}/multinode
+  environment:
+    PATH: "{{ kolla_venv_path }}/bin:{{ ansible_env.PATH }}"
+    ANSIBLE_CONFIG: "{{ kolla_config_dir }}/ansible.cfg"

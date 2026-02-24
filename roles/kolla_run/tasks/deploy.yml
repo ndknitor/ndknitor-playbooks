@@ -1,0 +1,24 @@
+---
+- name: Check if deploy has been completed
+  ansible.builtin.stat:
+    path: "{{ kolla_config_dir }}/.deploy_done"
+  register: deploy_marker
+
+- name: Run kolla-ansible deploy
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/kolla-ansible deploy
+      -i {{ kolla_config_dir }}/multinode
+  environment:
+    PATH: "{{ kolla_venv_path }}/bin:{{ ansible_env.PATH }}"
+    ANSIBLE_CONFIG: "{{ kolla_config_dir }}/ansible.cfg"
+  when: not deploy_marker.stat.exists
+  register: deploy_result
+  timeout: 7200
+
+- name: Create deploy marker
+  ansible.builtin.file:
+    path: "{{ kolla_config_dir }}/.deploy_done"
+    state: touch
+    mode: '0644'
+  when: not deploy_marker.stat.exists

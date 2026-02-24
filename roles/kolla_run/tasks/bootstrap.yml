@@ -1,0 +1,23 @@
+---
+- name: Check if bootstrap has been completed
+  ansible.builtin.stat:
+    path: "{{ kolla_config_dir }}/.bootstrap_done"
+  register: bootstrap_marker
+
+- name: Run kolla-ansible bootstrap-servers
+  ansible.builtin.command:
+    cmd: >
+      {{ kolla_venv_path }}/bin/kolla-ansible bootstrap-servers
+      -i {{ kolla_config_dir }}/multinode
+  environment:
+    PATH: "{{ kolla_venv_path }}/bin:{{ ansible_env.PATH }}"
+    ANSIBLE_CONFIG: "{{ kolla_config_dir }}/ansible.cfg"
+  when: not bootstrap_marker.stat.exists
+  register: bootstrap_result
+
+- name: Create bootstrap marker
+  ansible.builtin.file:
+    path: "{{ kolla_config_dir }}/.bootstrap_done"
+    state: touch
+    mode: '0644'
+  when: not bootstrap_marker.stat.exists

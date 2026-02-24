@@ -1,0 +1,31 @@
+---
+# Play 1: Ensure Docker on all OpenStack nodes
+- name: Install Docker on OpenStack nodes
+  hosts: openstack_controller:openstack_compute
+  become: true
+  roles:
+    - docker
+
+# Play 2: Prepare all OpenStack nodes
+- name: Prepare OpenStack nodes
+  hosts: openstack_controller:openstack_compute
+  become: true
+  roles:
+    - kolla_prepare
+
+# Play 3: Prepare Cinder LVM storage
+- name: Prepare Cinder LVM storage
+  hosts: openstack_storage
+  become: true
+  tasks:
+    - name: Set up Cinder storage
+      ansible.builtin.include_role:
+        name: kolla_prepare
+        tasks_from: storage.yml
+
+# Play 4: Install and configure Kolla-Ansible on deploy node
+- name: Install and configure Kolla-Ansible
+  hosts: openstack_controller[0]
+  become: true
+  roles:
+    - kolla_deploy

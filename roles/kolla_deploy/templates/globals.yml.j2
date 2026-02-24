@@ -1,0 +1,50 @@
+# {{ ansible_managed }}
+---
+kolla_base_distro: "{{ kolla_base_distro }}"
+openstack_release: "{{ kolla_openstack_release }}"
+
+kolla_internal_vip_address: "{{ kolla_internal_vip_address }}"
+network_interface: "{{ kolla_network_interface }}"
+neutron_external_interface: "{{ kolla_neutron_external_interface }}"
+
+docker_registry: "{{ kolla_docker_registry }}"
+docker_namespace: "{{ kolla_docker_namespace }}"
+
+# Networking
+neutron_plugin_agent: "{{ kolla_network_backend }}"
+
+# Optional services
+{% if kolla_enable_cinder %}
+enable_cinder: "yes"
+{% if kolla_enable_cinder_backend_lvm %}
+enable_cinder_backend_lvm: "yes"
+cinder_volume_group: "{{ kolla_cinder_volume_group }}"
+cinder_cluster_name: "{{ kolla_cinder_cluster_name }}"
+{% endif %}
+{% endif %}
+{% if kolla_enable_horizon %}
+enable_horizon: "yes"
+{% endif %}
+{% if kolla_enable_heat %}
+enable_heat: "yes"
+{% endif %}
+{% if kolla_enable_octavia %}
+enable_octavia: "yes"
+{% endif %}
+{% if kolla_enable_swift %}
+enable_swift: "yes"
+{% endif %}
+{% if kolla_enable_neutron_provider_networks %}
+enable_neutron_provider_networks: "yes"
+{% endif %}
+{% if kolla_enable_central_logging %}
+enable_central_logging: "yes"
+{% endif %}
+
+# Glance
+{% if kolla_glance_backend_file %}
+glance_backend_file: "yes"
+{% endif %}
+
+# Nova
+nova_compute_virt_type: "kvm"

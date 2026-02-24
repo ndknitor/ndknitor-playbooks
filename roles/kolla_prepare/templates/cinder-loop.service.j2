@@ -1,0 +1,14 @@
+[Unit]
+Description=Setup loop device for Cinder LVM
+DefaultDependencies=no
+Before=lvm2-activation-early.service
+After=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/losetup -f {{ cinder_loop_file }}
+ExecStop=/sbin/losetup -d /dev/loop0
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target

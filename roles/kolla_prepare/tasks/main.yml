@@ -1,0 +1,49 @@
+---
+- name: Install Python and pip prerequisites
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - gcc
+      - libffi-dev
+      - libssl-dev
+      - python3-docker
+    state: present
+    update_cache: yes
+
+- name: Load required kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Persist kernel modules across reboots
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/kolla.conf
+    content: |
+      br_netfilter
+      overlay
+    mode: '0644'
+
+- name: Set sysctl parameters
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-kolla.conf
+    reload: yes
+  loop:
+    - { key: net.ipv4.ip_forward, value: "1" }
+    - { key: net.bridge.bridge-nf-call-iptables, value: "1" }
+    - { key: net.bridge.bridge-nf-call-ip6tables, value: "1" }
+
+- name: Disable libvirt AppArmor profile (if present)
+  ansible.builtin.file:
+    path: /etc/apparmor.d/disable/usr.sbin.libvirtd
+    src: /etc/apparmor.d/usr.sbin.libvirtd
+    state: link
+  failed_when: false
+  changed_when: false
