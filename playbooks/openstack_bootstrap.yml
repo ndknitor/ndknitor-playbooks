@@ -23,7 +23,18 @@
         name: kolla_prepare
         tasks_from: storage.yml
 
-# Play 4: Install and configure Kolla-Ansible on deploy node
+# Play 4: Export Ceph config and keyrings for Kolla-Ansible
+- name: Integrate Ceph with Kolla-Ansible
+  hosts: openstack_controller[0]
+  become: true
+  tasks:
+    - name: Export Ceph config for Kolla
+      ansible.builtin.include_role:
+        name: ceph
+        tasks_from: integrate.yml
+      when: kolla_enable_ceph | default(false)
+
+# Play 5: Install and configure Kolla-Ansible on deploy node
 - name: Install and configure Kolla-Ansible
   hosts: openstack_controller[0]
   become: true

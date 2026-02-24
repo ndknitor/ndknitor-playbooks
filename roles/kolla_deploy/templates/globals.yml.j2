@@ -16,7 +16,13 @@ neutron_plugin_agent: "{{ kolla_network_backend }}"
 # Optional services
 {% if kolla_enable_cinder %}
 enable_cinder: "yes"
-{% if kolla_enable_cinder_backend_lvm %}
+{% if kolla_enable_ceph %}
+cinder_backend_ceph: "yes"
+ceph_cinder_user: "{{ ceph_cinder_user | default('cinder') }}"
+ceph_cinder_pool_name: "{{ ceph_pool_volumes | default('volumes') }}"
+ceph_cinder_backup_user: "{{ ceph_cinder_backup_user | default('cinder-backup') }}"
+ceph_cinder_backup_pool_name: "{{ ceph_pool_backups | default('backups') }}"
+{% elif kolla_enable_cinder_backend_lvm %}
 enable_cinder_backend_lvm: "yes"
 cinder_volume_group: "{{ kolla_cinder_volume_group }}"
 cinder_cluster_name: "{{ kolla_cinder_cluster_name }}"
@@ -42,9 +48,19 @@ enable_central_logging: "yes"
 {% endif %}
 
 # Glance
-{% if kolla_glance_backend_file %}
+{% if kolla_enable_ceph %}
+glance_backend_ceph: "yes"
+ceph_glance_user: "{{ ceph_glance_user | default('glance') }}"
+ceph_glance_pool_name: "{{ ceph_pool_images | default('images') }}"
+glance_backend_file: "no"
+{% elif kolla_glance_backend_file %}
 glance_backend_file: "yes"
 {% endif %}
 
 # Nova
+{% if kolla_enable_ceph %}
+nova_backend_ceph: "yes"
+ceph_nova_user: "{{ ceph_cinder_user | default('cinder') }}"
+ceph_nova_pool_name: "{{ ceph_pool_vms | default('vms') }}"
+{% endif %}
 nova_compute_virt_type: "kvm"

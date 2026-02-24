@@ -47,3 +47,17 @@ cinder_loop_size_gb: 20
 
 # Nova
 nova_compute_virt_type: kvm
+
+# Ceph storage backend (set kolla_enable_ceph=true to use Ceph instead of LVM/file)
+kolla_enable_ceph: false                         # Enable Ceph backend for Glance, Cinder, Nova
+ceph_release: reef                               # Ceph release (reef=v18 LTS, squid=v19)
+ceph_cluster_network: "192.168.56.0/24"          # Replication traffic network
+ceph_osd_device: ""                              # Block device for OSD (empty = use loop device)
+ceph_use_loop_device: true                       # Use loop file when no block device
+ceph_loop_file: /var/lib/ceph/osd-loop.img
+ceph_loop_size_gb: 20
+ceph_osd_memory_target_gb: 2                     # OSD memory limit (default 4GB, reduce for small nodes)
+ceph_pool_volumes: volumes
+ceph_pool_images: images
+ceph_pool_backups: backups
+ceph_pool_vms: vms

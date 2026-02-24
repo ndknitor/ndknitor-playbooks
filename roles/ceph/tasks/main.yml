@@ -1,0 +1,19 @@
+---
+- name: Add Ceph APT key
+  ansible.builtin.shell:
+    cmd: wget -q -O- 'https://download.ceph.com/keys/release.asc' | gpg --dearmor -o /etc/apt/keyrings/ceph.gpg
+    creates: /etc/apt/keyrings/ceph.gpg
+
+- name: Add Ceph APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/ceph.gpg] https://download.ceph.com/debian-{{ ceph_release }}/ bookworm main"
+    filename: ceph
+    state: present
+
+- name: Install cephadm and ceph-common
+  ansible.builtin.apt:
+    name:
+      - cephadm
+      - ceph-common
+    state: present
+    update_cache: true

@@ -1,0 +1,37 @@
+---
+# Play 1: Install Ceph packages on all Ceph nodes
+- name: Install Ceph packages
+  hosts: ceph_mon:ceph_osd
+  become: true
+  roles:
+    - ceph
+
+# Play 2: Bootstrap Ceph cluster and add hosts
+- name: Bootstrap Ceph cluster
+  hosts: ceph_mon[0]
+  become: true
+  tasks:
+    - name: Bootstrap cluster
+      ansible.builtin.include_role:
+        name: ceph
+        tasks_from: bootstrap.yml
+
+# Play 3: Deploy OSDs on storage nodes
+- name: Deploy Ceph OSDs
+  hosts: ceph_osd
+  become: true
+  tasks:
+    - name: Set up OSD
+      ansible.builtin.include_role:
+        name: ceph
+        tasks_from: osd.yml
+
+# Play 4: Create pools and keyrings
+- name: Create Ceph pools and keyrings
+  hosts: ceph_mon[0]
+  become: true
+  tasks:
+    - name: Create pools and keyrings
+      ansible.builtin.include_role:
+        name: ceph
+        tasks_from: pools.yml

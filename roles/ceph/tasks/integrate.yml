@@ -1,0 +1,69 @@
+---
+- name: Get Ceph FSID
+  ansible.builtin.command:
+    cmd: ceph fsid
+  register: ceph_fsid
+  changed_when: false
+
+- name: Get Ceph MON hosts
+  ansible.builtin.shell:
+    cmd: ceph mon dump --format json 2>/dev/null | python3 -c "import sys,json; mons=json.load(sys.stdin)['mons']; print(','.join(m['public_addrs']['addrvec'][0]['addr'] for m in mons))"
+  register: ceph_mon_hosts
+  changed_when: false
+
+- name: Create Kolla Ceph config directories
+  ansible.builtin.file:
+    path: "{{ ceph_kolla_config_dir }}/config/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - glance
+    - cinder/cinder-volume
+    - cinder/cinder-backup
+    - nova
+
+- name: Write ceph.conf for Kolla services
+  ansible.builtin.copy:
+    dest: "{{ ceph_kolla_config_dir }}/config/{{ item }}/ceph.conf"
+    content: |
+      [global]
+      fsid = {{ ceph_fsid.stdout }}
+      mon_host = {{ ceph_mon_hosts.stdout }}
+      auth_cluster_required = cephx
+      auth_service_required = cephx
+      auth_client_required = cephx
+    mode: '0644'
+  loop:
+    - glance
+    - cinder/cinder-volume
+    - cinder/cinder-backup
+    - nova
+
+- name: Export Glance keyring
+  ansible.builtin.shell:
+    cmd: "ceph auth get client.{{ ceph_glance_user }} > {{ ceph_kolla_config_dir }}/config/glance/ceph.client.{{ ceph_glance_user }}.keyring"
+  changed_when: false
+
+- name: Export Cinder keyring
+  ansible.builtin.shell:
+    cmd: "ceph auth get client.{{ ceph_cinder_user }} > {{ ceph_kolla_config_dir }}/config/cinder/cinder-volume/ceph.client.{{ ceph_cinder_user }}.keyring"
+  changed_when: false
+
+- name: Copy Cinder keyring for cinder-backup (needs access to volumes pool)
+  ansible.builtin.shell:
+    cmd: "ceph auth get client.{{ ceph_cinder_user }} > {{ ceph_kolla_config_dir }}/config/cinder/cinder-backup/ceph.client.{{ ceph_cinder_user }}.keyring"
+  changed_when: false
+
+- name: Export Cinder-backup keyring
+  ansible.builtin.shell:
+    cmd: "ceph auth get client.{{ ceph_cinder_backup_user }} > {{ ceph_kolla_config_dir }}/config/cinder/cinder-backup/ceph.client.{{ ceph_cinder_backup_user }}.keyring"
+  changed_when: false
+
+- name: Export Nova keyring (uses cinder user)
+  ansible.builtin.shell:
+    cmd: "ceph auth get client.{{ ceph_cinder_user }} > {{ ceph_kolla_config_dir }}/config/nova/ceph.client.{{ ceph_cinder_user }}.keyring"
+  changed_when: false
+
+- name: Show integration status
+  ansible.builtin.debug:
+    msg: "Ceph keyrings and config placed in {{ ceph_kolla_config_dir }}/config/"

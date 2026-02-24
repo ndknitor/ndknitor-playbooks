@@ -1,0 +1,68 @@
+---
+- name: Create RBD pools
+  ansible.builtin.command:
+    cmd: "ceph osd pool create {{ item }} {{ ceph_pool_pg_num }}"
+  loop:
+    - "{{ ceph_pool_volumes }}"
+    - "{{ ceph_pool_images }}"
+    - "{{ ceph_pool_backups }}"
+    - "{{ ceph_pool_vms }}"
+  register: pool_create
+  changed_when: "'already exists' not in pool_create.stderr"
+  failed_when: "pool_create.rc != 0 and 'already exists' not in pool_create.stderr"
+
+- name: Initialize pools for RBD
+  ansible.builtin.command:
+    cmd: "rbd pool init {{ item }}"
+  loop:
+    - "{{ ceph_pool_volumes }}"
+    - "{{ ceph_pool_images }}"
+    - "{{ ceph_pool_backups }}"
+    - "{{ ceph_pool_vms }}"
+  changed_when: false
+
+- name: Create Glance keyring
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_glance_user }}
+      mon 'profile rbd'
+      osd 'profile rbd pool={{ ceph_pool_images }}'
+      mgr 'profile rbd pool={{ ceph_pool_images }}'
+  changed_when: false
+
+- name: Create Cinder keyring
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_cinder_user }}
+      mon 'profile rbd'
+      osd 'profile rbd pool={{ ceph_pool_volumes }}, profile rbd pool={{ ceph_pool_vms }}, profile rbd-read-only pool={{ ceph_pool_images }}'
+      mgr 'profile rbd pool={{ ceph_pool_volumes }}, profile rbd pool={{ ceph_pool_vms }}'
+  changed_when: false
+
+- name: Create Cinder-backup keyring
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_cinder_backup_user }}
+      mon 'profile rbd'
+      osd 'profile rbd pool={{ ceph_pool_backups }}'
+      mgr 'profile rbd pool={{ ceph_pool_backups }}'
+  changed_when: false
+
+- name: Wait for cluster healthy
+  ansible.builtin.command:
+    cmd: ceph health
+  register: final_health
+  retries: 30
+  delay: 10
+  until: "'HEALTH_OK' in final_health.stdout or 'HEALTH_WARN' in final_health.stdout"
+  changed_when: false
+
+- name: Show cluster status
+  ansible.builtin.command:
+    cmd: ceph -s
+  register: ceph_status
+  changed_when: false
+
+- name: Display cluster status
+  ansible.builtin.debug:
+    msg: "{{ ceph_status.stdout_lines }}"

@@ -44,3 +44,6 @@ kolla_enable_central_logging: false
 
 # Glance backend
 kolla_glance_backend_file: true
+
+# Ceph backend (overrides LVM/file when enabled)
+kolla_enable_ceph: false

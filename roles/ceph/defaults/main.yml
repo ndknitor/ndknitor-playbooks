@@ -1,0 +1,32 @@
+---
+# Ceph release
+ceph_release: reef
+
+# Cluster network (for replication traffic)
+ceph_cluster_network: "192.168.56.0/24"
+
+# OSD configuration
+ceph_osd_device: ""                              # Block device for OSD (e.g. /dev/sdb). Leave empty for loop device
+ceph_use_loop_device: true                       # Use loop file when no block device specified
+ceph_loop_file: /var/lib/ceph/osd-loop.img
+ceph_loop_size_gb: 20
+
+# Tune OSD memory for small/dev nodes (default 4GB is too much)
+ceph_osd_memory_target_gb: 2
+
+# OpenStack pool names
+ceph_pool_volumes: volumes
+ceph_pool_images: images
+ceph_pool_backups: backups
+ceph_pool_vms: vms
+
+# Pool PG count (small clusters use fewer PGs)
+ceph_pool_pg_num: 64
+
+# OpenStack Ceph users
+ceph_glance_user: glance
+ceph_cinder_user: cinder
+ceph_cinder_backup_user: cinder-backup
+
+# Kolla config directory (where to place keyrings)
+ceph_kolla_config_dir: /etc/kolla

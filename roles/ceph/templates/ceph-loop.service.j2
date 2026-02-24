@@ -1,0 +1,13 @@
+[Unit]
+Description=Setup loop device for Ceph OSD
+DefaultDependencies=no
+Before=ceph.target
+After=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/losetup --find --show {{ ceph_loop_file }}
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target

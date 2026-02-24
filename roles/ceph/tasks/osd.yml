@@ -1,0 +1,70 @@
+---
+- name: Set OSD device fact
+  ansible.builtin.set_fact:
+    ceph_osd_target: "{{ ceph_osd_device }}"
+  when: ceph_osd_device | length > 0
+
+# Loop device setup (when no physical device specified)
+- name: Set up loop device for OSD
+  when: ceph_use_loop_device and (ceph_osd_device | length == 0)
+  block:
+    - name: Check if loop file already exists
+      ansible.builtin.stat:
+        path: "{{ ceph_loop_file }}"
+      register: loop_file
+
+    - name: Create directory for loop file
+      ansible.builtin.file:
+        path: "{{ ceph_loop_file | dirname }}"
+        state: directory
+        mode: '0755'
+      when: not loop_file.stat.exists
+
+    - name: Create loop file
+      ansible.builtin.command:
+        cmd: "truncate -s {{ ceph_loop_size_gb }}G {{ ceph_loop_file }}"
+        creates: "{{ ceph_loop_file }}"
+
+    - name: Check if loop device is already attached
+      ansible.builtin.shell:
+        cmd: "losetup -j {{ ceph_loop_file }} | head -1 | cut -d: -f1"
+      register: existing_loop
+      changed_when: false
+
+    - name: Attach loop device
+      ansible.builtin.command:
+        cmd: "losetup --find --show {{ ceph_loop_file }}"
+      register: new_loop
+      when: existing_loop.stdout | length == 0
+
+    - name: Set OSD device fact to loop device
+      ansible.builtin.set_fact:
+        ceph_osd_target: "{{ existing_loop.stdout if existing_loop.stdout | length > 0 else new_loop.stdout }}"
+
+    - name: Install ceph-loop systemd service
+      ansible.builtin.template:
+        src: ceph-loop.service.j2
+        dest: /etc/systemd/system/ceph-loop.service
+        mode: '0644'
+
+    - name: Enable ceph-loop service
+      ansible.builtin.systemd:
+        name: ceph-loop
+        enabled: true
+        daemon_reload: true
+
+# Add OSD via cephadm on the bootstrap node
+- name: Add OSD for this host
+  ansible.builtin.command:
+    cmd: "ceph orch daemon add osd {{ inventory_hostname }}:{{ ceph_osd_target }}"
+  delegate_to: "{{ groups['ceph_mon'][0] }}"
+  register: osd_add
+  changed_when: "'Created' in osd_add.stdout"
+  failed_when: "osd_add.rc != 0 and 'already' not in osd_add.stderr"
+
+- name: Tune OSD memory target
+  ansible.builtin.command:
+    cmd: "ceph config set osd osd_memory_target {{ ceph_osd_memory_target_gb * 1073741824 }}"
+  delegate_to: "{{ groups['ceph_mon'][0] }}"
+  run_once: true
+  changed_when: false
